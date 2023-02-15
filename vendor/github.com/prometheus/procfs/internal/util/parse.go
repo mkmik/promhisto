@@ -14,12 +14,9 @@
 package util
 
 import (
-	"bytes"
 	"io/ioutil"
-	"os"
 	"strconv"
 	"strings"
-	"syscall"
 )
 
 // ParseUint32s parses a slice of strings into a slice of uint32s.
@@ -52,6 +49,21 @@ func ParseUint64s(ss []string) ([]uint64, error) {
 	return us, nil
 }
 
+// ParsePInt64s parses a slice of strings into a slice of int64 pointers.
+func ParsePInt64s(ss []string) ([]*int64, error) {
+	us := make([]*int64, 0, len(ss))
+	for _, s := range ss {
+		u, err := strconv.ParseInt(s, 10, 64)
+		if err != nil {
+			return nil, err
+		}
+
+		us = append(us, &u)
+	}
+
+	return us, nil
+}
+
 // ReadUintFromFile reads a file and attempts to parse a uint64 from it.
 func ReadUintFromFile(path string) (uint64, error) {
 	data, err := ioutil.ReadFile(path)
@@ -61,25 +73,25 @@ func ReadUintFromFile(path string) (uint64, error) {
 	return strconv.ParseUint(strings.TrimSpace(string(data)), 10, 64)
 }
 
-// SysReadFile is a simplified ioutil.ReadFile that invokes syscall.Read directly.
-// https://github.com/prometheus/node_exporter/pull/728/files
-func SysReadFile(file string) (string, error) {
-	f, err := os.Open(file)
+// ReadIntFromFile reads a file and attempts to parse a int64 from it.
+func ReadIntFromFile(path string) (int64, error) {
+	data, err := ioutil.ReadFile(path)
 	if err != nil {
-		return "", err
+		return 0, err
 	}
-	defer f.Close()
+	return strconv.ParseInt(strings.TrimSpace(string(data)), 10, 64)
+}
 
-	// On some machines, hwmon drivers are broken and return EAGAIN.  This causes
-	// Go's ioutil.ReadFile implementation to poll forever.
-	//
-	// Since we either want to read data or bail immediately, do the simplest
-	// possible read using syscall directly.
-	b := make([]byte, 128)
-	n, err := syscall.Read(int(f.Fd()), b)
-	if err != nil {
-		return "", err
+// ParseBool parses a string into a boolean pointer.
+func ParseBool(b string) *bool {
+	var truth bool
+	switch b {
+	case "enabled":
+		truth = true
+	case "disabled":
+		truth = false
+	default:
+		return nil
 	}
-
-	return string(bytes.TrimSpace(b[:n])), nil
+	return &truth
 }
